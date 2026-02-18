@@ -2,45 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hola Base 2026</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .container {
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 60px 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-        }
-        h1 {
-            font-size: 4rem;
-            color: #ffffff;
-            margin: 0;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
-        }
-        .version {
-            font-size: 1.5rem;
-            color: #e0e0e0;
-            margin-top: 20px;
-            font-weight: 300;
-        }
-    </style>
+    <title>Base 2026</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div class="container">
-        <h1>Hola Base</h1>
-        <div class="version">Version 2026</div>
+        <h1>Hola Base 2026</h1>
+        <button onclick="irLogin()">Ingresar</button>
     </div>
+
+    <script>
+        function irLogin() {
+            window.location.href = "login.html";
+        }
+    </script>
+
 </body>
 </html>
