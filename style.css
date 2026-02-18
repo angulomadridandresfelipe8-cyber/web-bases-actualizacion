@@ -1,142 +1,145 @@
-/* Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+:root{
+    --primary: #2a5298;
+    --primary-dark: #1e3c72;
+    --muted: #6b7280;
+    --card-bg: #ffffff;
+    --glass: rgba(255,255,255,0.85);
 }
 
-/* Fondo general corporativo */
+*{box-sizing:border-box}
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f4f6f9;
-    color: #1f2937;
+    margin: 0;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3c72 50%, #2a5298 100%);
+    color: #0f172a;
+    min-height: 100vh;
 }
 
-/* Contenedor principal */
 .container {
-    width: 95%;
-    max-width: 1200px;
+    background: var(--glass);
     margin: 40px auto;
-    background: #ffffff;
-    padding: 30px;
-    border-radius: 14px;
-    box-shadow: 0px 10px 30px rgba(0,0,0,0.08);
+    padding: 28px;
+    border-radius: 12px;
+    width: 92%;
+    max-width: 1100px;
+    box-shadow: 0 12px 40px rgba(2,6,23,0.5);
 }
 
-/* Encabezados */
-h1 {
-    font-size: 26px;
-    font-weight: 600;
-    margin-bottom: 20px;
+.center { text-align:center; margin-top:120px }
+.lead { color: var(--muted); margin-bottom:18px }
+
+.topbar {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 24px;
+    color:white;
+}
+.topbar .brand { font-weight:700 }
+
+.linkbtn {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.actions { display:flex; gap:12px; justify-content:center }
+.actions button { width:180px }
+
+button {
+    padding:10px 16px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    background: var(--primary);
+    color: white;
+    font-weight:600;
+    box-shadow: 0 6px 18px rgba(11,45,84,0.25);
+}
+
+button.secondary, .secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid rgba(42,82,152,0.15);
+    box-shadow: none;
+}
+
+button.primary { background: var(--primary) }
+button.primary:hover { background: var(--primary-dark) }
+
+.dashboard-body { background: linear-gradient(135deg,#071024,#12305a); padding-bottom: 60px }
+
+.tabs {
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+}
+.tab-button {
+    padding:10px 14px;
+    border-radius:10px 10px 0 0;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    cursor:pointer;
+    font-weight:600;
     color: #0f172a;
 }
-
-h2 {
-    font-size: 20px;
-    margin-bottom: 15px;
-    color: #1e293b;
-}
-
-/* Botones corporativos */
-button {
-    background: #0f3d91;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: 0.3s ease;
-}
-
-button:hover {
-    background: #092c6c;
-}
-
-/* Inputs */
-input {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    margin-bottom: 12px;
-}
-
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.tab-button {
-    padding: 10px 15px;
-    background: #e5e7eb;
-    border-radius: 8px;
-    cursor: pointer;
-    border: none;
-}
-
 .tab-button.active {
-    background: #0f3d91;
+    background: linear-gradient(90deg,var(--primary),var(--primary-dark));
     color: white;
+    box-shadow: 0 8px 24px rgba(11,45,84,0.25);
 }
 
-.tab-content {
-    display: none;
-}
+.tab-content { display:none; padding:18px; background: transparent; }
+.tab-content.active { display:block; background: rgba(255,255,255,0.95); border-radius: 8px; padding:20px; box-shadow: 0 12px 30px rgba(2,6,23,0.12) }
 
-.tab-content.active {
-    display: block;
-}
-
-/* Panel archivos */
 .file-label {
-    background: #0f3d91;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: inline-block;
+    display:inline-block;
+    padding:12px 16px;
+    background: linear-gradient(90deg,var(--primary),var(--primary-dark));
+    color:white;
+    border-radius:10px;
+    cursor:pointer;
+    margin-bottom:12px;
+}
+.file-label input { display:none }
+
+.preview { margin-top:16px }
+
+.table-wrapper { overflow:auto; max-height:240px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); }
+table { width:100%; border-collapse:collapse; font-size:13px }
+thead th { position:sticky; top:0; background:#f8fafc; padding:10px; text-align:left; border-bottom:1px solid rgba(0,0,0,0.06) }
+tbody td { padding:8px; border-bottom:1px solid rgba(0,0,0,0.04) }
+
+.muted { color: var(--muted) }
+.error { color: #7f1d1d; background: #fff1f2; padding:10px; border-radius:8px; display:inline-block }
+
+.card-grid { display:flex; gap:12px; margin-top:12px }
+.card { background: white; padding:16px; border-radius:10px; box-shadow: 0 8px 20px rgba(2,6,23,0.06); flex:1; text-align:center }
+.card h3 { margin:6px 0 0; font-size:20px }
+.card p { margin:6px 0 0; color:var(--muted) }
+
+.actions-row { display:flex; gap:8px; margin-top:12px }
+
+.viz-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px }
+.viz-controls label { display:flex; flex-direction:column; font-size:13px; color:var(--muted) }
+.viz-controls select { padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06) }
+
+.chart-wrapper { position:relative; height:420px; background: white; border-radius:10px; padding:12px; box-shadow: 0 8px 24px rgba(2,6,23,0.06) }
+
+input[type="text"], input[type="password"], select {
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid rgba(0,0,0,0.08);
+    margin:8px 0;
 }
 
-.file-label input {
-    display: none;
+@media (max-width:800px){
+    .card-grid { flex-direction:column }
+    .viz-controls { flex-direction:column; align-items:stretch }
+    .actions button { width: 48% }
 }
 
-/* Tabla profesional */
-.table-container {
-    margin-top: 20px;
-    overflow-x: auto;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-th {
-    background: #0f3d91;
-    color: white;
-    padding: 10px;
-    text-align: left;
-}
-
-td {
-    padding: 8px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-tr:hover {
-    background: #f1f5f9;
-}
-
-/* Canvas gráfico */
-canvas {
-    margin-top: 20px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0px 5px 20px rgba(0,0,0,0.05);
-    padding: 10px;
-}

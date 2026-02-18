@@ -6,17 +6,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div class="container">
-        <h1>Hola Base 2026</h1>
-        <button onclick="irLogin()">Ingresar</button>
+    <div class="container center">
+        <h1>Base 2026</h1>
+        <p class="lead">Bienvenido. Accede al panel para gestionar y visualizar tus bases.</p>
+        <div class="actions">
+            <button onclick="location.href='login.html'">Ingresar</button>
+            <button class="secondary" onclick="location.href='dashboard.html'">Ir al Dashboard</button>
+        </div>
     </div>
-
-    <script>
-        function irLogin() {
-            window.location.href = "login.html";
-        }
-    </script>
-
 </body>
 </html>

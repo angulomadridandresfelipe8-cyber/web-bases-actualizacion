@@ -1,19 +1,332 @@
-<div id="grafica" class="tab-content">
-    <h2>Interfaz Gráfica Profesional</h2>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Base 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="dashboard-body">
+    <header class="topbar">
+        <div class="brand">Base 2026 — Dashboard</div>
+        <nav>
+            <button onclick="location.href='index.html'" class="linkbtn">Inicio</button>
+        </nav>
+    </header>
 
-    <div class="table-container">
-        <table id="tablaDatos">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Valor</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-    </div>
+    <main class="container dashboard">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="panel">Panel</button>
+            <button class="tab-button" data-tab="cargar">Cargar Archivos</button>
+            <button class="tab-button" data-tab="visualizar">Visualizar Gráficos</button>
+        </div>
 
-    <canvas id="grafico" width="900" height="400"></canvas>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <section id="panel" class="tab-content active">
+            <h2>Panel</h2>
+            <p class="muted">Resumen rápido y controles.</p>
+            <div class="card-grid">
+                <div class="card">
+                    <h3 id="cantidadArchivos">0</h3>
+                    <p>Archivos cargados</p>
+                </div>
+                <div class="card">
+                    <h3 id="filasPreview">—</h3>
+                    <p>Filas en la base actual</p>
+                </div>
+                <div class="card">
+                    <h3 id="columnasPreview">—</h3>
+                    <p>Columnas</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="cargar" class="tab-content">
+            <h2>Cargar Archivos</h2>
+            <p class="muted">Selecciona un archivo CSV. La primera fila se usa como cabecera.</p>
+
+            <label class="file-label">
+                Seleccionar archivo CSV
+                <input type="file" id="archivo" accept=".csv,text/csv">
+            </label>
+
+            <div class="actions-row">
+                <button id="btnGuardar" class="primary" disabled>Guardar Base</button>
+                <button id="btnLimpiar" class="secondary" disabled>Limpiar</button>
+            </div>
+
+            <div id="previewArea" class="preview" style="display:none">
+                <h3>Previsualización</h3>
+                <div id="previewInfo" class="muted"></div>
+                <div id="previewTableWrapper" class="table-wrapper"></div>
+            </div>
+        </section>
+
+        <section id="visualizar" class="tab-content">
+            <h2>Visualizar Gráficos</h2>
+            <p class="muted">Crea gráficos a partir de la base cargada.</p>
+
+            <div id="noData" class="error">No hay datos cargados. Ve a "Cargar Archivos".</div>
+
+            <div id="vizControls" style="display:none" class="viz-controls">
+                <label>Etiqueta (eje X):
+                    <select id="selectLabel"></select>
+                </label>
+                <label>Serie (eje Y):
+                    <select id="selectSeries"></select>
+                </label>
+                <label>Tipo:
+                    <select id="selectType">
+                        <option value="line">Línea</option>
+                        <option value="bar">Barras</option>
+                        <option value="pie">Pie</option>
+                    </select>
+                </label>
+                <button id="btnGenerar" class="primary">Generar Gráfico</button>
+            </div>
+
+            <div class="chart-wrapper">
+                <canvas id="grafico"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Manejo de pestañas
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = btn.dataset.tab;
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(tab).classList.add('active');
+            });
+        });
+
+        // Estado global
+        let baseData = null; // { headers: [], rows: [ [] ] }
+
+        // Elementos
+        const inputArchivo = document.getElementById('archivo');
+        const previewArea = document.getElementById('previewArea');
+        const previewTableWrapper = document.getElementById('previewTableWrapper');
+        const previewInfo = document.getElementById('previewInfo');
+        const btnGuardar = document.getElementById('btnGuardar');
+        const btnLimpiar = document.getElementById('btnLimpiar');
+        const cantidadArchivos = document.getElementById('cantidadArchivos');
+        const filasPreview = document.getElementById('filasPreview');
+        const columnasPreview = document.getElementById('columnasPreview');
+
+        const noData = document.getElementById('noData');
+        const vizControls = document.getElementById('vizControls');
+        const selectLabel = document.getElementById('selectLabel');
+        const selectSeries = document.getElementById('selectSeries');
+        const selectType = document.getElementById('selectType');
+        const btnGenerar = document.getElementById('btnGenerar');
+        const ctx = document.getElementById('grafico').getContext('2d');
+        let chartInstance = null;
+
+        // Parser CSV simple
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n/).filter(l => l.trim() !== '');
+            if (lines.length === 0) return null;
+            const headers = lines[0].split(',').map(h => h.trim());
+            const rows = lines.slice(1).map(line => {
+                // split but keep basic quoted values simple
+                const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                return values;
+            });
+            return { headers, rows };
+        }
+
+        function renderPreview(data) {
+            previewTableWrapper.innerHTML = '';
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const trHead = document.createElement('tr');
+            data.headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            // show up to 10 filas
+            data.rows.slice(0, 10).forEach(row => {
+                const tr = document.createElement('tr');
+                data.headers.forEach((_, i) => {
+                    const td = document.createElement('td');
+                    td.textContent = row[i] ?? '';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            previewTableWrapper.appendChild(table);
+            previewArea.style.display = 'block';
+            previewInfo.textContent = `Mostrando ${Math.min(10, data.rows.length)} de ${data.rows.length} filas.`;
+            cantidadArchivos.textContent = '1';
+            filasPreview.textContent = data.rows.length;
+            columnasPreview.textContent = data.headers.length;
+        }
+
+        inputArchivo.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Por favor selecciona un archivo CSV.');
+                inputArchivo.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const text = evt.target.result;
+                const data = parseCSV(text);
+                if (!data) {
+                    alert('No se pudo parsear el archivo.');
+                    return;
+                }
+                // guardar temporalmente pero no definitivo hasta "Guardar Base"
+                window.tempData = data;
+                renderPreview(data);
+                btnGuardar.disabled = false;
+                btnLimpiar.disabled = false;
+            };
+            reader.readAsText(file);
+        });
+
+        btnGuardar.addEventListener('click', () => {
+            if (!window.tempData) return;
+            baseData = window.tempData;
+            window.tempData = null;
+            btnGuardar.disabled = true;
+            updateVizControls();
+            alert('Base guardada correctamente.');
+        });
+
+        btnLimpiar.addEventListener('click', () => {
+            inputArchivo.value = '';
+            previewArea.style.display = 'none';
+            previewTableWrapper.innerHTML = '';
+            previewInfo.textContent = '';
+            btnGuardar.disabled = true;
+            btnLimpiar.disabled = true;
+            cantidadArchivos.textContent = '0';
+            filasPreview.textContent = '—';
+            columnasPreview.textContent = '—';
+            baseData = null;
+            updateVizControls();
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+        });
+
+        function updateVizControls() {
+            if (!baseData) {
+                noData.style.display = 'block';
+                vizControls.style.display = 'none';
+                return;
+            }
+            noData.style.display = 'none';
+            vizControls.style.display = 'flex';
+            // populate selects
+            selectLabel.innerHTML = '';
+            selectSeries.innerHTML = '';
+            baseData.headers.forEach((h, i) => {
+                const opt1 = document.createElement('option');
+                opt1.value = i;
+                opt1.textContent = h;
+                selectLabel.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = i;
+                opt2.textContent = h;
+                selectSeries.appendChild(opt2);
+            });
+            // set defaults: label = first column, series = second if exists
+            selectLabel.selectedIndex = 0;
+            selectSeries.selectedIndex = baseData.headers.length > 1 ? 1 : 0;
+        }
+
+        function isNumberArray(arr) {
+            return arr.every(v => v !== '' && !isNaN(parseFloat(v)));
+        }
+
+        btnGenerar.addEventListener('click', () => {
+            if (!baseData) return;
+            const labelIdx = parseInt(selectLabel.value, 10);
+            const seriesIdx = parseInt(selectSeries.value, 10);
+            const type = selectType.value;
+
+            const labels = baseData.rows.map(r => r[labelIdx] ?? '');
+            const rawSeries = baseData.rows.map(r => r[seriesIdx] ?? '');
+            const numeric = rawSeries.map(v => {
+                const n = parseFloat(String(v).replace(/,/g, '.'));
+                return isNaN(n) ? null : n;
+            });
+
+            // If selected series is not numeric and type requires numeric, try to map counts
+            let dataToPlot = numeric;
+            let finalLabels = labels;
+            if (!isNumberArray(numeric.filter(v => v !== null))) {
+                // attempt: if values categorical, aggregate counts
+                const counts = {};
+                rawSeries.forEach((val, i) => {
+                    const key = String(val ?? '');
+                    counts[key] = (counts[key] || 0) + 1;
+                });
+                finalLabels = Object.keys(counts);
+                dataToPlot = Object.values(counts);
+            } else {
+                // use numeric values, and keep label values as-is
+                finalLabels = labels;
+                dataToPlot = numeric;
+            }
+
+            // destroy previous chart
+            if (chartInstance) chartInstance.destroy();
+
+            const cfg = {
+                type: type,
+                data: {
+                    labels: finalLabels,
+                    datasets: [{
+                        label: baseData.headers[seriesIdx],
+                        data: dataToPlot,
+                        backgroundColor: type === 'pie' ? generateColors(dataToPlot.length) : 'rgba(42,82,152,0.8)',
+                        borderColor: type === 'pie' ? '#fff' : 'rgba(42,82,152,1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: type === 'pie' ? {} : {
+                        x: { ticks: { maxRotation: 45, minRotation: 0 } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            };
+            chartInstance = new Chart(ctx, cfg);
+        });
+
+        function generateColors(n) {
+            const palette = [];
+            for (let i = 0; i < n; i++) {
+                const hue = Math.round((i * 360 / n));
+                palette.push(`hsl(${hue} 70% 50% / 0.85)`);
+            }
+            return palette;
+        }
+
+        // Inicial
+        updateVizControls();
+    </script>
+</body>
+</html>

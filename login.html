@@ -2,34 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login Base 2026</title>
+    <title>Login - Base 2026</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div class="container">
-        <h2>Iniciar Sesión</h2>
-
-        <input type="text" id="usuario" placeholder="Usuario">
-        <input type="password" id="pin" placeholder="PIN" maxlength="4">
-
-        <button onclick="validar()">Entrar</button>
-
-        <p id="error" class="error"></p>
+        <h2>Iniciar sesión</h2>
+        <form onsubmit="event.preventDefault(); location.href='dashboard.html'">
+            <input type="text" placeholder="Usuario" required>
+            <input type="password" placeholder="Contraseña" required>
+            <button type="submit">Ingresar</button>
+            <button type="button" class="secondary" onclick="location.href='index.html'">Volver</button>
+        </form>
     </div>
-
-    <script>
-        function validar() {
-            const usuario = document.getElementById("usuario").value;
-            const pin = document.getElementById("pin").value;
-
-            if (usuario === "Andresmadrid" && pin === "4521") {
-                window.location.href = "interfazgrafico.html"; // 👈 CAMBIO AQUÍ
-            } else {
-                document.getElementById("error").innerText = "Usuario o PIN incorrecto";
-            }
-        }
-    </script>
-
 </body>
 </html>
