@@ -11,7 +11,7 @@
         <h2>Iniciar Sesión</h2>
 
         <input type="text" id="usuario" placeholder="Usuario">
-        <input type="password" id="pin" placeholder="PIN">
+        <input type="password" id="pin" placeholder="PIN" maxlength="4">
 
         <button onclick="validar()">Entrar</button>
 
@@ -23,7 +23,7 @@
             const usuario = document.getElementById("usuario").value;
             const pin = document.getElementById("pin").value;
 
-            if (usuario === "Andresmadrid25" && pin === "4521") {
+            if (usuario === "Andresmadrid" && pin === "4521") {
                 window.location.href = "dashboard.html";
             } else {
                 document.getElementById("error").innerText = "Usuario o PIN incorrecto";
