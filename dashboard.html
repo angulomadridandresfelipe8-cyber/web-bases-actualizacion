@@ -2,31 +2,65 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Archivos - Base 2026</title>
+    <title>Dashboard - Base 2026</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="dashboard">
 
-    <div class="container">
-        <h2>Panel de Archivos</h2>
+    <div class="container dashboard">
+        <h1>Dashboard - Base 2026</h1>
 
-        <label class="file-label">
-            Agregar Archivo
-            <input type="file" id="archivo" multiple>
-        </label>
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab('archivos')">Panel de Archivos</button>
+            <button class="tab-button" onclick="openTab('grafica')">Interfaz Gráfica</button>
+        </div>
 
-        <div id="listaArchivos"></div>
-        <div id="contenidoArchivos"></div>
+        <div id="archivos" class="tab-content active">
+            <h2>Panel de Archivos</h2>
+
+            <label class="file-label">
+                Agregar Archivo
+                <input type="file" id="archivo" multiple>
+            </label>
+
+            <div id="listaArchivos"></div>
+            <div id="contenidoArchivos"></div>
+            <div id="botonesAccion" style="display: none; margin-top: 20px;">
+                <button id="btnCargarBase" onclick="openTab('grafica')">Cargar Base</button>
+            </div>
+        </div>
+
+        <div id="grafica" class="tab-content">
+            <h2>Interfaz Gráfica</h2>
+            <p>Aquí se mostrará la interfaz gráfica para visualizar los datos de la base cargada.</p>
+            <!-- Placeholder for graphical interface, e.g., canvas or chart library -->
+            <canvas id="grafico" width="600" height="400"></canvas>
+        </div>
     </div>
 
     <script>
+        function openTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-button');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
         const inputArchivo = document.getElementById("archivo");
         const lista = document.getElementById("listaArchivos");
         const contenido = document.getElementById("contenidoArchivos");
+        const botonesAccion = document.getElementById("botonesAccion");
 
         inputArchivo.addEventListener("change", function() {
             lista.innerHTML = "";
             contenido.innerHTML = "";
+            if (this.files.length > 0) {
+                botonesAccion.style.display = "block";
+            } else {
+                botonesAccion.style.display = "none";
+            }
             for (let i = 0; i < this.files.length; i++) {
                 const file = this.files[i];
                 const p = document.createElement("p");
