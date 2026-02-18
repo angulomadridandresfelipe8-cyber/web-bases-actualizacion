@@ -16,18 +16,31 @@
         </label>
 
         <div id="listaArchivos"></div>
+        <div id="contenidoArchivos"></div>
     </div>
 
     <script>
         const inputArchivo = document.getElementById("archivo");
         const lista = document.getElementById("listaArchivos");
+        const contenido = document.getElementById("contenidoArchivos");
 
         inputArchivo.addEventListener("change", function() {
             lista.innerHTML = "";
+            contenido.innerHTML = "";
             for (let i = 0; i < this.files.length; i++) {
+                const file = this.files[i];
                 const p = document.createElement("p");
-                p.textContent = "Archivo cargado: " + this.files[i].name;
+                p.textContent = "Archivo cargado: " + file.name;
                 lista.appendChild(p);
+
+                // Leer el contenido del archivo
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement("div");
+                    div.innerHTML = `<h3>${file.name}</h3><pre>${e.target.result}</pre>`;
+                    contenido.appendChild(div);
+                };
+                reader.readAsText(file);
             }
         });
     </script>
