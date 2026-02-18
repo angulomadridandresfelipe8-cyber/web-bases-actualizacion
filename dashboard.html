@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Base 2026</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h2>Panel de Archivos</h2>
+
+        <label class="file-label">
+            Agregar Archivo
+            <input type="file" id="archivo" multiple>
+        </label>
+
+        <div id="listaArchivos"></div>
+    </div>
+
+    <script>
+        const inputArchivo = document.getElementById("archivo");
+        const lista = document.getElementById("listaArchivos");
+
+        inputArchivo.addEventListener("change", function() {
+            lista.innerHTML = "";
+            for (let i = 0; i < this.files.length; i++) {
+                const p = document.createElement("p");
+                p.textContent = "Archivo cargado: " + this.files[i].name;
+                lista.appendChild(p);
+            }
+        });
+    </script>
+
+</body>
+</html>
