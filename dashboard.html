@@ -63,30 +63,21 @@
         </section>
 
         <section id="visualizar" class="tab-content">
-            <h2>Visualizar Gráficos</h2>
-            <p class="muted">Crea gráficos a partir de la base cargada.</p>
+            <h2>Reporte de Seguimiento Comercial – Febrero</h2>
+            <p class="muted">Reporte automático generado a partir de la base cargada.</p>
 
             <div id="noData" class="error">No hay datos cargados. Ve a "Cargar Archivos".</div>
 
-            <div id="vizControls" style="display:none" class="viz-controls">
-                <label>Etiqueta (eje X):
-                    <select id="selectLabel"></select>
-                </label>
-                <label>Serie (eje Y):
-                    <select id="selectSeries"></select>
-                </label>
-                <label>Tipo:
-                    <select id="selectType">
-                        <option value="line">Línea</option>
-                        <option value="bar">Barras</option>
-                        <option value="pie">Pie</option>
-                    </select>
-                </label>
-                <button id="btnGenerar" class="primary">Generar Gráfico</button>
-            </div>
+            <div id="reporte" style="display:none">
+                <h3>1. Indicadores de Conversión (%)</h3>
+                <div id="conversionIndicators">
+                    <canvas id="verticalChart" width="400" height="200"></canvas>
+                </div>
 
-            <div class="chart-wrapper">
-                <canvas id="grafico"></canvas>
+                <h3>2. Estado de Fuerza de Ventas (Diario/Acumulado)</h3>
+                <div id="salesForceStatus">
+                    <canvas id="leadsChart" width="400" height="200"></canvas>
+                </div>
             </div>
         </section>
     </main>
@@ -117,14 +108,13 @@
         const filasPreview = document.getElementById('filasPreview');
         const columnasPreview = document.getElementById('columnasPreview');
 
-        const noData = document.getElementById('noData');
-        const vizControls = document.getElementById('vizControls');
-        const selectLabel = document.getElementById('selectLabel');
-        const selectSeries = document.getElementById('selectSeries');
-        const selectType = document.getElementById('selectType');
-        const btnGenerar = document.getElementById('btnGenerar');
-        const ctx = document.getElementById('grafico').getContext('2d');
-        let chartInstance = null;
+        const reporte = document.getElementById('reporte');
+        const conversionIndicators = document.getElementById('conversionIndicators');
+        const salesForceStatus = document.getElementById('salesForceStatus');
+        const verticalChartCtx = document.getElementById('verticalChart').getContext('2d');
+        const leadsChartCtx = document.getElementById('leadsChart').getContext('2d');
+        let verticalChartInstance = null;
+        let leadsChartInstance = null;
 
         // Parser CSV simple
         function parseCSV(text) {
@@ -239,112 +229,169 @@
             filasPreview.textContent = '—';
             columnasPreview.textContent = '—';
             baseData = null;
-            updateVizControls();
-            if (chartInstance) {
-                chartInstance.destroy();
-                chartInstance = null;
+            if (verticalChartInstance) {
+                verticalChartInstance.destroy();
+                verticalChartInstance = null;
             }
+            if (leadsChartInstance) {
+                leadsChartInstance.destroy();
+                leadsChartInstance = null;
+            }
+            updateVizControls();
         });
 
         function updateVizControls() {
             if (!baseData) {
                 noData.style.display = 'block';
-                vizControls.style.display = 'none';
+                reporte.style.display = 'none';
                 return;
             }
             noData.style.display = 'none';
-            vizControls.style.display = 'flex';
-            // populate selects
-            selectLabel.innerHTML = '';
-            selectSeries.innerHTML = '';
-            baseData.headers.forEach((h, i) => {
-                const opt1 = document.createElement('option');
-                opt1.value = i;
-                opt1.textContent = h;
-                selectLabel.appendChild(opt1);
-
-                const opt2 = document.createElement('option');
-                opt2.value = i;
-                opt2.textContent = h;
-                selectSeries.appendChild(opt2);
-            });
-            // set defaults: label = first column, series = second if exists
-            selectLabel.selectedIndex = 0;
-            selectSeries.selectedIndex = baseData.headers.length > 1 ? 1 : 0;
+            reporte.style.display = 'block';
+            generateReport();
         }
 
-        function isNumberArray(arr) {
-            return arr.every(v => v !== '' && !isNaN(parseFloat(v)));
+        function findColumn(headers, keywords) {
+            for (let i = 0; i < headers.length; i++) {
+                const header = headers[i].toLowerCase();
+                if (keywords.some(k => header.includes(k))) return i;
+            }
+            return -1;
         }
 
-        btnGenerar.addEventListener('click', () => {
-            if (!baseData) return;
-            const labelIdx = parseInt(selectLabel.value, 10);
-            const seriesIdx = parseInt(selectSeries.value, 10);
-            const type = selectType.value;
+        function generateReport() {
+            const headers = baseData.headers.map(h => h.toLowerCase());
+            const rows = baseData.rows;
 
-            const labels = baseData.rows.map(r => r[labelIdx] ?? '');
-            const rawSeries = baseData.rows.map(r => r[seriesIdx] ?? '');
-            const numeric = rawSeries.map(v => {
-                const n = parseFloat(String(v).replace(/,/g, '.'));
-                return isNaN(n) ? null : n;
-            });
+            // Find columns
+            const verticalCol = findColumn(headers, ['vertical', 'segmento', 'mercado']);
+            const leadsCol = findColumn(headers, ['leads', 'prospectos']);
+            const ventasCol = findColumn(headers, ['ventas', 'sales', 'cerrado']);
+            const colocadasCol = findColumn(headers, ['colocadas', 'presentadas', 'ofertas']);
+            const calificadasCol = findColumn(headers, ['calificadas', 'qualified']);
+            const fechaCol = findColumn(headers, ['fecha', 'date']);
 
-            // If selected series is not numeric and type requires numeric, try to map counts
-            let dataToPlot = numeric;
-            let finalLabels = labels;
-            if (!isNumberArray(numeric.filter(v => v !== null))) {
-                // attempt: if values categorical, aggregate counts
-                const counts = {};
-                rawSeries.forEach((val, i) => {
-                    const key = String(val ?? '');
-                    counts[key] = (counts[key] || 0) + 1;
+            // Destroy previous charts
+            if (verticalChartInstance) verticalChartInstance.destroy();
+            if (leadsChartInstance) leadsChartInstance.destroy();
+
+            // 1. Indicadores de Conversión
+            if (verticalCol !== -1 && ventasCol !== -1) {
+                const verticalGroups = {};
+                rows.forEach(row => {
+                    const vertical = row[verticalCol] || 'Sin Vertical';
+                    const ventas = parseInt(row[ventasCol]) || 0;
+                    if (!verticalGroups[vertical]) verticalGroups[vertical] = { total: 0, ventas: 0 };
+                    verticalGroups[vertical].total++;
+                    verticalGroups[vertical].ventas += ventas;
                 });
-                finalLabels = Object.keys(counts);
-                dataToPlot = Object.values(counts);
-            } else {
-                // use numeric values, and keep label values as-is
-                finalLabels = labels;
-                dataToPlot = numeric;
-            }
+                const labels = Object.keys(verticalGroups);
+                const data = labels.map(v => {
+                    const d = verticalGroups[v];
+                    return d.total > 0 ? ((d.ventas / d.total) * 100).toFixed(2) : 0;
+                });
 
-            // destroy previous chart
-            if (chartInstance) chartInstance.destroy();
-
-            const cfg = {
-                type: type,
-                data: {
-                    labels: finalLabels,
-                    datasets: [{
-                        label: baseData.headers[seriesIdx],
-                        data: dataToPlot,
-                        backgroundColor: type === 'pie' ? generateColors(dataToPlot.length) : 'rgba(42,82,152,0.8)',
-                        borderColor: type === 'pie' ? '#fff' : 'rgba(42,82,152,1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: 'top' }
+                verticalChartInstance = new Chart(verticalChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Cierre por Vertical (%)',
+                            data: data,
+                            backgroundColor: 'rgba(42,82,152,0.8)',
+                            borderColor: 'rgba(42,82,152,1)',
+                            borderWidth: 1
+                        }]
                     },
-                    scales: type === 'pie' ? {} : {
-                        x: { ticks: { maxRotation: 45, minRotation: 0 } },
-                        y: { beginAtZero: true }
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
                     }
-                }
-            };
-            chartInstance = new Chart(ctx, cfg);
-        });
-
-        function generateColors(n) {
-            const palette = [];
-            for (let i = 0; i < n; i++) {
-                const hue = Math.round((i * 360 / n));
-                palette.push(`hsl(${hue} 70% 50% / 0.85)`);
+                });
             }
-            return palette;
+
+            // Additional text for other indicators
+            let additionalText = '';
+            if (colocadasCol !== -1) {
+                const totalColocadas = rows.reduce((sum, row) => sum + (parseInt(row[colocadasCol]) || 0), 0);
+                const ratio = rows.length > 0 ? ((totalColocadas / rows.length) * 100).toFixed(2) : 0;
+                additionalText += `<p>Oportunidades Colocadas: ${ratio}%</p>`;
+            }
+            if (calificadasCol !== -1) {
+                const totalCalificadas = rows.reduce((sum, row) => sum + (parseInt(row[calificadasCol]) || 0), 0);
+                const pct = rows.length > 0 ? ((totalCalificadas / rows.length) * 100).toFixed(2) : 0;
+                additionalText += `<p>Oportunidades Calificadas: ${pct}%</p>`;
+            }
+            conversionIndicators.innerHTML += additionalText;
+
+            // 2. Estado de Fuerza de Ventas
+            if (verticalCol !== -1 && leadsCol !== -1) {
+                const verticalLeads = {};
+                rows.forEach(row => {
+                    const vertical = row[verticalCol] || 'Sin Vertical';
+                    const leads = parseInt(row[leadsCol]) || 0;
+                    verticalLeads[vertical] = (verticalLeads[vertical] || 0) + leads;
+                });
+                const labels = Object.keys(verticalLeads);
+                const data = labels.map(v => verticalLeads[v]);
+
+                leadsChartInstance = new Chart(leadsChartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Leads por Vertical',
+                            data: data,
+                            backgroundColor: 'rgba(152,42,82,0.8)',
+                            borderColor: 'rgba(152,42,82,1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Additional text
+            let salesText = '';
+            if (leadsCol !== -1) {
+                const totalLeads = rows.reduce((sum, row) => sum + (parseInt(row[leadsCol]) || 0), 0);
+                salesText += `<p>Volumen de Leads Total: ${totalLeads}</p>`;
+            }
+
+            if (fechaCol !== -1 && leadsCol !== -1) {
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                const todayStr = today.toISOString().split('T')[0];
+                const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+                const todayLeads = rows.filter(row => row[fechaCol] === todayStr).reduce((sum, row) => sum + (parseInt(row[leadsCol]) || 0), 0);
+                const yesterdayLeads = rows.filter(row => row[fechaCol] === yesterdayStr).reduce((sum, row) => sum + (parseInt(row[leadsCol]) || 0), 0);
+                const meta = 10;
+                salesText += `<p>Análisis Comparativo: Ayer ${yesterdayLeads} vs Meta ${meta} (${yesterdayLeads >= meta ? 'Cumplido' : 'No cumplido'})</p>`;
+
+                const now = new Date();
+                const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+                const weekLeads = rows.filter(row => {
+                    const date = new Date(row[fechaCol]);
+                    return date >= startOfWeek;
+                }).reduce((sum, row) => sum + (parseInt(row[leadsCol]) || 0), 0);
+                salesText += `<p>Revisión Semanal: ${weekLeads}</p>`;
+            }
+
+            salesForceStatus.innerHTML += salesText;
         }
 
         // Inicial
