@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Comercial</title>
+<title>Reporte de Seguimiento Comercial – Febrero</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -28,13 +28,6 @@ header{
 
 .filtros{
     margin-bottom:20px;
-    display:flex;
-    gap:20px;
-    align-items:center;
-}
-
-select, input{
-    padding:8px;
 }
 
 .kpi-container{
@@ -79,22 +72,18 @@ canvas{
 <body>
 
 <header>
-Reporte de Seguimiento Comercial
+Reporte de Seguimiento Comercial – Febrero
 </header>
 
 <div class="container">
 
 <div class="filtros">
 <input type="file" id="inputExcel">
-<select id="filtroAnio">
-<option value="">Todos los años</option>
-</select>
-<select id="filtroMes">
-<option value="">Todos los meses</option>
-</select>
 </div>
 
+<!-- KPIs -->
 <div class="kpi-container">
+
 <div class="kpi">
 <h3>Total Leads</h3>
 <h2 id="kpiLeads">0</h2>
@@ -102,25 +91,36 @@ Reporte de Seguimiento Comercial
 
 <div class="kpi">
 <h3>Oportunidades Cerradas</h3>
-<h2 id="kpiCierre">0</h2>
+<h2 id="kpiCerradas">0</h2>
 </div>
 
 <div class="kpi">
 <h3>Tasa de Cierre</h3>
 <h2 id="kpiTasa">0%</h2>
 </div>
+
+<div class="kpi">
+<h3>Oportunidades Calificadas</h3>
+<h2 id="kpiCalificadas">0</h2>
+</div>
+
+</div>
+
+<!-- GRÁFICOS -->
+
+<div class="card">
+<h3>1. Cierre por Vertical (%)</h3>
+<canvas id="graficoCierreVertical"></canvas>
 </div>
 
 <div class="card">
-<canvas id="graficoVertical"></canvas>
+<h3>2. Volumen de Leads por Vertical</h3>
+<canvas id="graficoLeadsVertical"></canvas>
 </div>
 
 <div class="card">
+<h3>3. Ventas por Comercial</h3>
 <canvas id="graficoComercial"></canvas>
-</div>
-
-<div class="card">
-<canvas id="graficoLeads"></canvas>
 </div>
 
 </div>
@@ -141,96 +141,66 @@ const workbook = XLSX.read(data, {type:'array'});
 const sheet = workbook.Sheets[workbook.SheetNames[0]];
 datosGlobal = XLSX.utils.sheet_to_json(sheet);
 
-cargarFiltros(datosGlobal);
 procesarDatos(datosGlobal);
 };
 
 reader.readAsArrayBuffer(e.target.files[0]);
 });
 
-function cargarFiltros(data){
-
-let años = [...new Set(data.map(d => d["año"]).filter(Boolean))];
-let meses = [...new Set(data.map(d => d["mes"]).filter(Boolean))];
-
-let filtroAnio = document.getElementById("filtroAnio");
-let filtroMes = document.getElementById("filtroMes");
-
-años.forEach(a => {
-let option = document.createElement("option");
-option.value = a;
-option.text = a;
-filtroAnio.appendChild(option);
-});
-
-meses.forEach(m => {
-let option = document.createElement("option");
-option.value = m;
-option.text = m;
-filtroMes.appendChild(option);
-});
-
-filtroAnio.addEventListener("change", aplicarFiltros);
-filtroMes.addEventListener("change", aplicarFiltros);
-}
-
-function aplicarFiltros(){
-
-let anio = document.getElementById("filtroAnio").value;
-let mes = document.getElementById("filtroMes").value;
-
-let filtrado = datosGlobal.filter(d => {
-return (anio === "" || d["año"] == anio) &&
-(mes === "" || d["mes"] == mes);
-});
-
-procesarDatos(filtrado);
-}
-
 function procesarDatos(data){
 
 let totalLeads = data.length;
 let totalCerradas = 0;
+let totalCalificadas = 0;
 
+let leadsVertical = {};
 let cierreVertical = {};
 let ventasComercial = {};
-let leadsVertical = {};
 
 data.forEach(row => {
 
 let vertical = row["Vertical"] || "Sin Vertical";
-let estado = row["Estado de la Opp corregida"];
+let estado = row["Estado de la Opp corregida"] || "";
 let comercial = row["COMERCIAL"] || "Sin Comercial";
 
-if(!leadsVertical[vertical]){
-leadsVertical[vertical] = 0;
-}
+if(!leadsVertical[vertical]) leadsVertical[vertical] = 0;
 leadsVertical[vertical]++;
 
-if(estado === "Cerrada"){
+if(estado.toLowerCase().includes("calificada")){
+totalCalificadas++;
+}
+
+if(estado.toLowerCase().includes("cerrada")){
 totalCerradas++;
 
-if(!cierreVertical[vertical]){
-cierreVertical[vertical] = 0;
-}
+if(!cierreVertical[vertical]) cierreVertical[vertical] = 0;
 cierreVertical[vertical]++;
 
-if(!ventasComercial[comercial]){
-ventasComercial[comercial] = 0;
-}
+if(!ventasComercial[comercial]) ventasComercial[comercial] = 0;
 ventasComercial[comercial]++;
 }
 });
 
-let tasa = totalLeads > 0 ? ((totalCerradas / totalLeads) * 100).toFixed(1) : 0;
+let tasaCierre = totalLeads > 0 ? ((totalCerradas/totalLeads)*100).toFixed(1) : 0;
 
+// Actualizar KPIs
 document.getElementById("kpiLeads").innerText = totalLeads;
-document.getElementById("kpiCierre").innerText = totalCerradas;
-document.getElementById("kpiTasa").innerText = tasa + "%";
+document.getElementById("kpiCerradas").innerText = totalCerradas;
+document.getElementById("kpiTasa").innerText = tasaCierre + "%";
+document.getElementById("kpiCalificadas").innerText = totalCalificadas;
 
-crearGrafico("graficoVertical", cierreVertical, "Cierre por Vertical", chart1);
-crearGrafico("graficoComercial", ventasComercial, "Ventas por Comercial", chart2);
-crearGrafico("graficoLeads", leadsVertical, "Volumen de Leads por Vertical", chart3);
+// Convertir cierre por vertical a %
+let cierrePorcentaje = {};
+Object.keys(leadsVertical).forEach(v => {
+let cerradas = cierreVertical[v] || 0;
+let total = leadsVertical[v];
+cierrePorcentaje[v] = total > 0 ? ((cerradas/total)*100).toFixed(1) : 0;
+});
+
+crearGrafico("graficoCierreVertical", cierrePorcentaje, "Cierre % por Vertical", chart1);
+crearGrafico("graficoLeadsVertical", leadsVertical, "Leads por Vertical", chart2);
+crearGrafico("graficoComercial", ventasComercial, "Ventas por Comercial", chart3);
+
 }
 
 function crearGrafico(id, datos, titulo, chartRef){
@@ -251,13 +221,16 @@ data:Object.values(datos)
 }]
 },
 options:{
-responsive:true
+responsive:true,
+plugins:{
+legend:{display:false}
+}
 }
 });
 
-if(id === "graficoVertical") chart1 = nuevoChart;
-if(id === "graficoComercial") chart2 = nuevoChart;
-if(id === "graficoLeads") chart3 = nuevoChart;
+if(id === "graficoCierreVertical") chart1 = nuevoChart;
+if(id === "graficoLeadsVertical") chart2 = nuevoChart;
+if(id === "graficoComercial") chart3 = nuevoChart;
 }
 
 </script>
