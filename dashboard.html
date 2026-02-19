@@ -5,6 +5,7 @@
     <title>Dashboard - Base 2026</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="dashboard-body">
     <header class="topbar">
@@ -42,11 +43,11 @@
 
         <section id="cargar" class="tab-content">
             <h2>Cargar Archivos</h2>
-            <p class="muted">Selecciona un archivo CSV. La primera fila se usa como cabecera.</p>
+            <p class="muted">Selecciona un archivo CSV o Excel. La primera fila se usa como cabecera.</p>
 
             <label class="file-label">
-                Seleccionar archivo CSV
-                <input type="file" id="archivo" accept=".csv,text/csv">
+                Seleccionar archivo CSV o Excel
+                <input type="file" id="archivo" accept=".csv,.xls,.xlsx,.xlsm,.xlsb">
             </label>
 
             <div class="actions-row">
@@ -174,16 +175,33 @@
         inputArchivo.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                alert('Por favor selecciona un archivo CSV.');
+            if (!file.name.toLowerCase().match(/\.(csv|xls|xlsx|xlsm|xlsb)$/)) {
+                alert('Por favor selecciona un archivo CSV o Excel válido.');
                 inputArchivo.value = '';
                 return;
             }
 
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const text = evt.target.result;
-                const data = parseCSV(text);
+                const fileName = file.name.toLowerCase();
+                let data;
+                if (fileName.endsWith('.csv')) {
+                    const text = evt.target.result;
+                    data = parseCSV(text);
+                } else {
+                    // Excel
+                    const workbook = XLSX.read(evt.target.result, {type: 'binary'});
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                    if (json.length === 0) {
+                        alert('El archivo Excel está vacío.');
+                        return;
+                    }
+                    const headers = json[0].map(h => String(h || ''));
+                    const rows = json.slice(1).map(row => row.map(cell => String(cell || '')));
+                    data = { headers, rows };
+                }
                 if (!data) {
                     alert('No se pudo parsear el archivo.');
                     return;
@@ -194,7 +212,11 @@
                 btnGuardar.disabled = false;
                 btnLimpiar.disabled = false;
             };
-            reader.readAsText(file);
+            if (file.name.toLowerCase().endsWith('.csv')) {
+                reader.readAsText(file);
+            } else {
+                reader.readAsBinaryString(file);
+            }
         });
 
         btnGuardar.addEventListener('click', () => {
